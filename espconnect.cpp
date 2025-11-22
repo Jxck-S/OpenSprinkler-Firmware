@@ -68,7 +68,11 @@ void start_network_sta(const char *ssid, const char *pass, int32_t channel, cons
 	if(WiFi.getMode()!=WIFI_STA) WiFi.mode(WIFI_STA);
 	WiFi.begin(ssid, pass, channel, bssid);
 	WiFi.setSleep(false); // work-around for ARP issue: disable sleep mode
-	WiFi.setOutputPower(20.5);
+	#if defined(ESP8266)
+		WiFi.setOutputPower(20.5);
+	#elif defined(ESP32)
+		WiFi.setTxPower(WIFI_POWER_19_5dBm); // ESP32 uses different power API
+	#endif
 	WiFi.setAutoReconnect(true); // enable auto reconnect
 }
 #endif

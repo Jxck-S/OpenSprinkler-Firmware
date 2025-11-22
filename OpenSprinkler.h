@@ -58,6 +58,7 @@
 		#include <W5500lwIP.h>
 		#include <OpenThingsFramework.h>
 		#include <DNSServer.h>
+		#include <Ticker.h>
 		#include "espconnect.h"
 		#include "EMailSender.h"
 		#include "ch224.h"
