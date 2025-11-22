@@ -23,7 +23,7 @@
 
 #if defined(ARDUINO)
 	#include <Arduino.h>
-	#if defined(ESP8266)
+	#if defined(ESP8266) || defined(ESP32)
 		#include <ESP8266WiFi.h>
 	#else
 		#include <Ethernet.h>
@@ -123,7 +123,7 @@ boolean checkPassword(char* pw) {
 //handles /cv command
 void changeValues(char *message){
 	DEBUG_LOGF("Changing Values\r\n");
-	#if defined(ESP8266)
+	#if defined(ESP8266) || defined(ESP32)
 		extern uint32_t reboot_timer;
 	#endif
 
@@ -134,7 +134,7 @@ void changeValues(char *message){
 
 	if(findKeyVal(message, tmp_buffer, TMP_BUFFER_SIZE, PSTR("rbt"), true)){
 		DEBUG_LOGF("Rebooting\r\n");
-		#if defined(ESP8266)
+		#if defined(ESP8266) || defined(ESP32)
 			os.status.safe_reboot = 0;
 			reboot_timer = os.now_tz() + 1;
 		#else
@@ -324,7 +324,7 @@ void OSMqtt::init(void) {
 	DEBUG_LOGF("MQTT Init\r\n");
 
 	uint8_t mac[6] = {0};
-	#if defined(ESP8266)
+	#if defined(ESP8266) || defined(ESP32)
 	os.load_hardware_mac(mac, useEth);
 	#else
 	os.load_hardware_mac(mac, true);
@@ -483,7 +483,7 @@ void OSMqtt::loop(void) {
 /**************************** ARDUINO ********************************************/
 #if defined(ARDUINO)
 
-	#if defined(ESP8266)
+	#if defined(ESP8266) || defined(ESP32)
 		WiFiClient wifiClient;
 	#else
 		EthernetClient ethClient;
@@ -494,7 +494,7 @@ int OSMqtt::_init(void) {
 
 	if (mqtt_client) { delete mqtt_client; mqtt_client = 0; }
 
-	#if defined(ESP8266)
+	#if defined(ESP8266) || defined(ESP32)
 		client = &wifiClient;
 	#else
 		client = &ethClient;

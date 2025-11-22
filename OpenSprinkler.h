@@ -51,6 +51,21 @@
 		#include "espconnect.h"
 		#include "EMailSender.h"
 		#include "ch224.h"
+	#elif defined(ESP32) // for ESP32
+		#include <FS.h>
+		#include <LittleFS.h>
+		#ifdef WT32_ETH01
+			#include <ETH.h>
+		#else
+			#include <ENC28J60lwIP.h>
+			#include <W5500lwIP.h>
+		#endif
+		#include <OpenThingsFramework.h>
+		#include <DNSServer.h>
+		#include <Ticker.h>
+		#include "espconnect.h"
+		#include "EMailSender.h"
+		#include "ch224.h"
 	#else // for AVR
 		#include <SdFat.h>
 		#include <Ethernet.h>
@@ -80,6 +95,11 @@
 #if defined(ARDUINO)
 	#if defined(ESP8266)
 	extern ESP8266WebServer *update_server;
+	#elif defined(ESP32)
+	extern WebServer *update_server;
+	#endif
+	#if defined(ESP8266) || defined(ESP32)
+	#ifndef WT32_ETH01
 	extern ENC28J60lwIP enc28j60;
 	extern Wiznet5500lwIP w5500;
 	struct lwipEth {
@@ -110,6 +130,36 @@
 		}
 	};
 	extern lwipEth eth;
+	#else
+	// ESP32 native Ethernet wrapper for WT32-ETH01
+	struct esp32Eth {
+		inline boolean config(const IPAddress& local_ip, const IPAddress& gateway, const IPAddress& subnet, const IPAddress& dns1 = IPADDR_NONE, const IPAddress& dns2 = IPADDR_NONE) {
+			return ETH.config(local_ip, gateway, subnet, dns1, dns2);
+		}
+		inline boolean begin() {
+			return true; // ETH.begin() is called earlier in setup
+		}
+		inline IPAddress localIP() {
+			return ETH.localIP();
+		}
+		inline IPAddress subnetMask() {
+			return ETH.subnetMask();
+		}
+		inline IPAddress gatewayIP() {
+			return ETH.gatewayIP();
+		}
+		inline void setDefault() {
+			// Not needed for ESP32 native Ethernet
+		}
+		inline bool connected() {
+			return ETH.linkUp();
+		}
+		inline wl_status_t status() {
+			return ETH.linkUp() ? WL_CONNECTED : WL_DISCONNECTED;
+		}
+	};
+	extern esp32Eth eth;
+	#endif
 	#else
 		// AVR specific
 	#endif
@@ -418,15 +468,15 @@ public:
 #endif
 
 #if defined(ARDUINO) // LCD functions for Arduino
-	#if defined(ESP8266)
-	static void lcd_print_pgm(PGM_P str); // ESP8266 does not allow PGM_P followed by PROGMEM
+	#if defined(ESP8266) || defined(ESP32)
+	static void lcd_print_pgm(PGM_P str); // ESP8266/ESP32 does not allow PGM_P followed by PROGMEM
 	static void lcd_print_line_clear_pgm(PGM_P str, unsigned char line);
 	#else
 	static void lcd_print_pgm(PGM_P PROGMEM str);  // print a program memory string
 	static void lcd_print_line_clear_pgm(PGM_P PROGMEM str, unsigned char line);
 	#endif
 
-	#if defined(ESP8266)
+	#if defined(ESP8266) || defined(ESP32)
 	static IOEXP *mainio, *drio;
 	static IOEXP *expanders[];
 	static CH224 usbpd;
@@ -457,7 +507,7 @@ private:
 	static unsigned char button_read_busy(unsigned char pin_butt, unsigned char waitmode, unsigned char butt, unsigned char is_holding);
 #endif // LCD functions
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 	static void latch_boost(int8_t volt=-1);
 	static void latch_open(unsigned char sid);
 	static void latch_close(unsigned char sid);

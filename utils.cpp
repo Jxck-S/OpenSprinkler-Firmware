@@ -28,7 +28,7 @@ extern OpenSprinkler os;
 
 #if defined(ARDUINO)  // Arduino
 
-	#if defined(ESP8266)
+	#if defined(ESP8266) || defined(ESP32)
 		#include <FS.h>
 		#include <LittleFS.h>
 	#else
@@ -291,7 +291,7 @@ BoardType get_board_type() {
 
 
 void remove_file(const char *fn) {
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 
 	if(!LittleFS.exists(fn)) return;
 	LittleFS.remove(fn);
@@ -310,7 +310,7 @@ void remove_file(const char *fn) {
 }
 
 bool file_exists(const char *fn) {
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 
 	return LittleFS.exists(fn);
 
@@ -331,7 +331,7 @@ bool file_exists(const char *fn) {
 
 // file functions
 void file_read_block(const char *fn, void *dst, ulong pos, ulong len) {
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 
 	// do not use File.read_byte or read_byteUntil because it's very slow
 	File f = LittleFS.open(fn, "r");
@@ -364,7 +364,7 @@ void file_read_block(const char *fn, void *dst, ulong pos, ulong len) {
 }
 
 void file_write_block(const char *fn, const void *src, ulong pos, ulong len) {
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 
 	File f = LittleFS.open(fn, "r+");
 	if(!f) f = LittleFS.open(fn, "w");
@@ -404,7 +404,7 @@ void file_copy_block(const char *fn, ulong from, ulong to, ulong len, void *tmp)
 	// assume tmp buffer is provided and is larger than len
 	// todo future: if tmp buffer is not provided, do unsigned char-to-unsigned char copy
 	if(tmp==NULL) { return; }
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 
 	File f = LittleFS.open(fn, "r+");
 	if(!f) return;
@@ -442,7 +442,7 @@ void file_copy_block(const char *fn, ulong from, ulong to, ulong len, void *tmp)
 
 // compare a block of content
 unsigned char file_cmp_block(const char *fn, const char *buf, ulong pos) {
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 
 	File f = LittleFS.open(fn, "r");
 	if(f) {
@@ -670,7 +670,7 @@ bool isLeapYear(uint16_t y){ // Accepts 4 digit year and returns if leap year
 	return (y%400==0) || ((y%4==0) && (y%100!=0));
 }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 unsigned char hex2dec(const char *hex) {
 	return strtol(hex, NULL, 16);
 }

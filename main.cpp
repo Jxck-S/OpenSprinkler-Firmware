@@ -39,10 +39,18 @@
 #if defined(ARDUINO)
 	#if defined(ESP8266)
 		ESP8266WebServer *update_server = NULL;
+	#elif defined(ESP32)
+		WebServer *update_server = NULL;
+	#endif
+	#if defined(ESP8266) || defined(ESP32)
 		DNSServer *dns = NULL;
+		#ifndef WT32_ETH01
 		ENC28J60lwIP enc28j60(PIN_ETHER_CS); // ENC28J60 lwip for wired Ether
 		Wiznet5500lwIP w5500(PIN_ETHER_CS); // W5500 lwip for wired Ether
 		lwipEth eth;
+		#else
+		esp32Eth eth; // WT32-ETH01 native Ethernet
+		#endif
 		bool useEth = false; // tracks whether we are using WiFi or wired Ether connection
 	#else
 		EthernetServer *m_server = NULL;
@@ -60,7 +68,7 @@
 #endif
 
 #if defined(USE_SSD1306)
-	#if defined(ESP8266)
+	#if defined(ESP8266) || defined(ESP32)
 	static uint16_t led_blink_ms = LED_FAST_BLINK;
 	#else
 	static uint16_t led_blink_ms = 0;
@@ -124,7 +132,7 @@ void flow_poll() {
 		last_flow_rt = curr;
 	}
 
-	#if defined(ESP8266)
+	#if defined(ESP8266) || defined(ESP32)
 	if(os.hw_rev>=2) {
 		pinMode(PIN_SENSOR1, INPUT); // Work-around for PIN_SENSOR1 on OS3.2 and above
 		pinMode(PIN_SENSOR1, INPUT_PULLUP);
@@ -255,7 +263,7 @@ void ui_state_machine() {
 					os.lcd.clear(0, 1);
 					os.lcd.setCursor(0, 0);
 					#if defined(ARDUINO)
-					#if defined(ESP8266)
+					#if defined(ESP8266) || defined(ESP32)
 					if (useEth) { os.lcd.print(eth.gatewayIP()); }
 					else { os.lcd.print(WiFi.gatewayIP()); }
 					#else
@@ -286,7 +294,7 @@ void ui_state_machine() {
 				os.lcd.clear(0, 1);
 				os.lcd.setCursor(0, 0);
 				#if defined(ARDUINO)
-				#if defined(ESP8266)
+				#if defined(ESP8266) || defined(ESP32)
 				if (useEth) { os.lcd.print(eth.localIP()); }
 				else { os.lcd.print(WiFi.localIP()); }
 				#else
@@ -365,7 +373,7 @@ void ui_state_machine() {
 					os.lcd.print(os.last_reboot_cause);
 					ui_state = UI_STATE_DISP_IP;
 				} else if(digitalReadExt(PIN_BUTTON_2)==0) {  // if B2 is pressed while holding B3, reset to AP and reboot
-					#if defined(ESP8266)
+					#if defined(ESP8266) || defined(ESP32)
 					if(!ui_confirm(PSTR("Reset to AP?"))) {ui_state = UI_STATE_DEFAULT; break;}
 					os.reset_to_ap();
 					#endif
@@ -418,7 +426,7 @@ void ui_state_machine() {
 #if defined(ARDUINO)
 void do_setup() {
 	/* Clear WDT reset flag. */
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 	WiFi.persistent(false);
 	led_blink_ms = LED_FAST_BLINK;
 #else
@@ -430,7 +438,7 @@ void do_setup() {
 
 	os.begin();          // OpenSprinkler init
 	os.options_setup();  // Setup options
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 	os.setup_pd_voltage();
 #endif
 
@@ -531,7 +539,7 @@ void check_weather();
 static bool process_special_program_command(const char*, uint32_t curr_time);
 static void perform_ntp_sync();
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 bool delete_log_oldest();
 void start_server_ap();
 void start_server_client();
@@ -620,7 +628,7 @@ void do_loop()
 
 	// ====== Process Ethernet packets ======
 #if defined(ARDUINO)	// Process Ethernet packets for Arduino
-	#if defined(ESP8266)
+	#if defined(ESP8266) || defined(ESP32)
 	static ulong connecting_timeout;
 	switch(os.state) {
 	case OS_STATE_INITIAL:
@@ -777,7 +785,7 @@ void do_loop()
 	// The main control loop runs once every second
 	if (curr_time != last_time) {
 
-		#if defined(ESP8266)
+		#if defined(ESP8266) || defined(ESP32)
 		if(os.hw_rev>=2) {
 			pinMode(PIN_SENSOR1, INPUT_PULLUP); // this seems necessary for OS 3.2
 			pinMode(PIN_SENSOR2, INPUT_PULLUP);
@@ -1782,7 +1790,7 @@ void write_log(unsigned char type, time_os_t curr_time) {
 	// and move file pointer to the end
 #if defined(ARDUINO) // prepare log folder for Arduino
 
-	#if defined(ESP8266)
+	#if defined(ESP8266) || defined(ESP32)
 	File file = LittleFS.open(tmp_buffer, "r+");
 	if(!file) {
 		FSInfo fs_info;
@@ -1889,7 +1897,7 @@ void write_log(unsigned char type, time_os_t curr_time) {
 	strcat_P(tmp_buffer, PSTR("]\r\n"));
 
 #if defined(ARDUINO)
-	#if defined(ESP8266)
+	#if defined(ESP8266) || defined(ESP32)
 	file.write((const uint8_t*)tmp_buffer, strlen(tmp_buffer));
 	#else
 	file.write(tmp_buffer);
@@ -1901,7 +1909,7 @@ void write_log(unsigned char type, time_os_t curr_time) {
 #endif
 }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 bool delete_log_oldest() {
 	Dir dir = LittleFS.openDir(LOG_PREFIX);
 	time_os_t oldest_t = ULONG_MAX;
@@ -1931,7 +1939,7 @@ void delete_log(char *name) {
 	if (!os.iopts[IOPT_ENABLE_LOGGING]) return;
 #if defined(ARDUINO)
 
-	#if defined(ESP8266)
+	#if defined(ESP8266) || defined(ESP32)
 	if (strncmp(name, "all", 3) == 0) {
 		// delete all log files
 		Dir dir = LittleFS.openDir(LOG_PREFIX);
