@@ -85,7 +85,7 @@ extern unsigned char curr_alert_sid;
 	LiquidCrystal OpenSprinkler::lcd;
 #endif
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 	unsigned char OpenSprinkler::state = OS_STATE_INITIAL;
 	unsigned char OpenSprinkler::prev_station_bits[MAX_NUM_BOARDS];
 	IOEXP* OpenSprinkler::expanders[MAX_NUM_BOARDS/2];
@@ -496,7 +496,7 @@ bool detect_i2c(int addr) {
 /** read hardware MAC into tmp_buffer */
 #define MAC_CTRL_ID 0x50
 bool OpenSprinkler::load_hardware_mac(unsigned char* buffer, bool wired) {
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 	WiFi.macAddress((unsigned char*)buffer);
 	// if requesting wired Ethernet MAC, flip the last byte to create a modified MAC
 	if(wired) buffer[5] = ~buffer[5];
@@ -530,7 +530,7 @@ unsigned char OpenSprinkler::start_network() {
 	lcd_print_line_clear_pgm(PSTR("Starting..."), 1);
 	uint16_t httpport = (uint16_t)(iopts[IOPT_HTTPPORT_1]<<8) + (uint16_t)iopts[IOPT_HTTPPORT_0];
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 
 	if (start_ether()) {
 		useEth = true;
@@ -549,7 +549,11 @@ unsigned char OpenSprinkler::start_network() {
 	extern DNSServer *dns;
 	if(get_wifi_mode() == WIFI_MODE_AP) dns = new DNSServer();
 	if(update_server) { delete update_server; update_server = NULL; }
+	#if defined(ESP8266)
 	update_server = new ESP8266WebServer(8080);
+	#elif defined(ESP32)
+	update_server = new WebServer(8080);
+	#endif
 	DEBUG_PRINT(F("Started update server"));
 	return 1;
 
@@ -570,7 +574,7 @@ unsigned char OpenSprinkler::start_network() {
 }
 
 unsigned char OpenSprinkler::start_ether() {
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 	if(hw_rev<2) return 0;  // ethernet capability is only available when hw_rev>=2
 	eth.isW5500 = (hw_rev==2)?false:true; // os 3.2 uses enc28j60 and 3.3 uses w5500
 
@@ -703,7 +707,7 @@ unsigned char OpenSprinkler::start_ether() {
 }
 
 bool OpenSprinkler::network_connected(void) {
-#if defined (ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 	if(useEth)
 		return eth.connected();
 	else
@@ -720,7 +724,7 @@ void OpenSprinkler::reboot_dev(uint8_t cause) {
 		nvdata.reboot_cause = cause;
 		nvdata_save();
 	}
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 	ESP.restart();
 #else
 	resetFunc();
@@ -853,7 +857,7 @@ void OpenSprinkler::begin() {
 	hw_type = HW_TYPE_UNKNOWN;
 	hw_rev = 0;
 
-#if defined(ESP8266) // ESP8266 specific initializations
+#if defined(ESP8266) || defined(ESP32) // ESP8266/ESP32 specific initializations
 
 	/* detect hardware revision type */
 	if(detect_i2c(MAIN_I2CADDR)) {	// check if main PCF8574 exists
@@ -1025,7 +1029,7 @@ pinModeExt(PIN_BUTTON_3, INPUT_PULLUP);
 	clear_all_station_bits();
 	apply_all_station_bits();
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 	// OS 3.0 has two independent sensors
 	pinModeExt(PIN_SENSOR1, INPUT_PULLUP);
 	pinModeExt(PIN_SENSOR2, INPUT_PULLUP);
@@ -1164,7 +1168,7 @@ pinModeExt(PIN_BUTTON_3, INPUT_PULLUP);
 #endif
 }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 /** Setup PD voltage
  *
  */
@@ -1361,7 +1365,7 @@ void OpenSprinkler::latch_apply_all_station_bits() {
  */
 void OpenSprinkler::apply_all_station_bits(void (*post_activation_callback)()) {
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 	if(hw_type==HW_TYPE_LATCH) {
 		// if controller type is latching, the control mechanism is different
 		// hence will be handled separately
@@ -2620,7 +2624,7 @@ void OpenSprinkler::raindelay_stop() {
 #if defined(USE_DISPLAY)
 #if defined(ARDUINO)		// AVR LCD and button functions
 /** print a program memory string */
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 void OpenSprinkler::lcd_print_pgm(PGM_P str) {
 #else
 void OpenSprinkler::lcd_print_pgm(PGM_P PROGMEM str) {
@@ -2632,7 +2636,7 @@ void OpenSprinkler::lcd_print_pgm(PGM_P PROGMEM str) {
 }
 
 /** print a program memory string to a given line with clearing */
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 void OpenSprinkler::lcd_print_line_clear_pgm(PGM_P str, unsigned char line) {
 #else
 void OpenSprinkler::lcd_print_line_clear_pgm(PGM_P PROGMEM str, unsigned char line) {
@@ -2840,7 +2844,7 @@ void OpenSprinkler::lcd_print_screen(char c) {
 	}
 
 	lcd.setCursor(LCD_CURSOR_NETWORK, 1);
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 	if(useEth) {
 		lcd.write(eth.connected()?ICON_ETHER_CONNECTED:ICON_ETHER_DISCONNECTED);
 	}
@@ -3222,7 +3226,7 @@ void OpenSprinkler::set_screen_led(unsigned char status) {
 
 #endif
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 
 void OpenSprinkler::reset_to_ap() {
 	iopts[IOPT_WIFI_MODE] = WIFI_MODE_AP;

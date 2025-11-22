@@ -51,6 +51,16 @@
 		#include "espconnect.h"
 		#include "EMailSender.h"
 		#include "ch224.h"
+	#elif defined(ESP32) // for ESP32
+		#include <FS.h>
+		#include <LittleFS.h>
+		#include <ENC28J60lwIP.h>
+		#include <W5500lwIP.h>
+		#include <OpenThingsFramework.h>
+		#include <DNSServer.h>
+		#include "espconnect.h"
+		#include "EMailSender.h"
+		#include "ch224.h"
 	#else // for AVR
 		#include <SdFat.h>
 		#include <Ethernet.h>
@@ -80,6 +90,10 @@
 #if defined(ARDUINO)
 	#if defined(ESP8266)
 	extern ESP8266WebServer *update_server;
+	#elif defined(ESP32)
+	extern WebServer *update_server;
+	#endif
+	#if defined(ESP8266) || defined(ESP32)
 	extern ENC28J60lwIP enc28j60;
 	extern Wiznet5500lwIP w5500;
 	struct lwipEth {
@@ -418,15 +432,15 @@ public:
 #endif
 
 #if defined(ARDUINO) // LCD functions for Arduino
-	#if defined(ESP8266)
-	static void lcd_print_pgm(PGM_P str); // ESP8266 does not allow PGM_P followed by PROGMEM
+	#if defined(ESP8266) || defined(ESP32)
+	static void lcd_print_pgm(PGM_P str); // ESP8266/ESP32 does not allow PGM_P followed by PROGMEM
 	static void lcd_print_line_clear_pgm(PGM_P str, unsigned char line);
 	#else
 	static void lcd_print_pgm(PGM_P PROGMEM str);  // print a program memory string
 	static void lcd_print_line_clear_pgm(PGM_P PROGMEM str, unsigned char line);
 	#endif
 
-	#if defined(ESP8266)
+	#if defined(ESP8266) || defined(ESP32)
 	static IOEXP *mainio, *drio;
 	static IOEXP *expanders[];
 	static CH224 usbpd;
@@ -457,7 +471,7 @@ private:
 	static unsigned char button_read_busy(unsigned char pin_butt, unsigned char waitmode, unsigned char butt, unsigned char is_holding);
 #endif // LCD functions
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 	static void latch_boost(int8_t volt=-1);
 	static void latch_open(unsigned char sid);
 	static void latch_close(unsigned char sid);

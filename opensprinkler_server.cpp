@@ -45,11 +45,15 @@
 #endif
 
 #if defined(ARDUINO)
-	#if defined(ESP8266)
+	#if defined(ESP8266) || defined(ESP32)
 		#include <FS.h>
 		#include <LittleFS.h>
 		#include "espconnect.h"
-		extern ESP8266WebServer *update_server;
+		#if defined(ESP8266)
+			extern ESP8266WebServer *update_server;
+		#elif defined(ESP32)
+			extern WebServer *update_server;
+		#endif
 		extern ENC28J60lwIP enc28j60;
 		extern Wiznet5500lwIP w5500;
 		extern lwipEth eth;
@@ -281,7 +285,7 @@ void otf_send_result(OTF_PARAMS_DEF, unsigned char code, const char *item = NULL
 	res.writeBodyChunk((char *)"%s",json.c_str());
 }
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 void update_server_send_result(unsigned char code, const char* item = NULL) {
 	String json = F("{\"result\":");
 	json += code;
@@ -1089,7 +1093,7 @@ void server_json_options_main() {
 		if (oid==IOPT_BOOST_TIME || oid==IOPT_I_MIN_THRESHOLD || oid==IOPT_I_MAX_LIMIT || oid==IOPT_LATCH_ON_VOLTAGE || oid==IOPT_LATCH_OFF_VOLTAGE || oid==IOPT_TARGET_PD_VOLTAGE) continue;
 		#endif
 
-		#if defined(ESP8266)
+		#if defined(ESP8266) || defined(ESP32)
 		if (oid==IOPT_HW_VERSION) {
 			v+=os.hw_rev;	// for OS3.x, add hardware revision number
 		}
@@ -1098,7 +1102,7 @@ void server_json_options_main() {
 		if (oid==IOPT_SEQUENTIAL_RETIRED || oid==IOPT_URS_RETIRED || oid==IOPT_RSO_RETIRED || oid==IOPT_RESERVE_7 || oid==IOPT_RESERVE_8) continue;
 
 #if defined(ARDUINO)
-		#if defined(ESP8266)
+		#if defined(ESP8266) || defined(ESP32)
 		// for SSD1306, we can't adjust contrast or backlight
 		if(oid==IOPT_LCD_CONTRAST || oid==IOPT_LCD_BACKLIGHT) continue;
 		#else
@@ -1252,7 +1256,7 @@ void server_json_controller_main(OTF_PARAMS_DEF) {
 							pd.nqueue,
 							os.status.overcurrent_sid);
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 	bfill.emit_p(PSTR("\"RSSI\":$D,"), (int16_t)WiFi.RSSI());
 	bfill.emit_p(PSTR("\"apdv\":$D,"), os.actual_pd_voltage);
 #endif
@@ -1457,7 +1461,7 @@ void server_change_values(OTF_PARAMS_DEF)
 		}
 	}
 
-	#if defined(ESP8266)
+	#if defined(ESP8266) || defined(ESP32)
 	if (findKeyVal(FKV_SOURCE, tmp_buffer, TMP_BUFFER_SIZE, PSTR("ap"), true)) {
 		os.reset_to_ap();
 	}
@@ -1691,7 +1695,7 @@ void server_change_options(OTF_PARAMS_DEF)
 	os.iopts_save();
 	os.populate_master();
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 	if (tpdv_change) {
 		os.setup_pd_voltage();
 	}
@@ -1868,7 +1872,7 @@ void server_change_manual(OTF_PARAMS_DEF) {
 }
 
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 int file_fgets(File file, char* buf, int maxsize) {
 	int index=0;
 	while(index<maxsize) {
@@ -1948,7 +1952,7 @@ void server_json_log(OTF_PARAMS_DEF) {
 		snprintf(tmp_buffer, TMP_BUFFER_SIZE*2 , "%d", i);
 		make_logfile_name(tmp_buffer);
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 		File file = LittleFS.open(tmp_buffer, "r");
 		if(!file) continue;
 #elif defined(ARDUINO)
@@ -1961,7 +1965,7 @@ void server_json_log(OTF_PARAMS_DEF) {
 #endif // prepare to open log file
 		int result;
 		while(true) {
-		#if defined(ESP8266)
+		#if defined(ESP8266) || defined(ESP32)
 			// do not use file.read_byte or read_byteUntil because it's very slow
 			result = file_fgets(file, tmp_buffer, TMP_BUFFER_SIZE);
 			if (result <= 0) {
@@ -2134,7 +2138,7 @@ void server_json_debug(OTF_PARAMS_DEF) {
 	print_header();
 #endif
 	bfill.emit_p(PSTR("{\"date\":\"$S\",\"time\":\"$S\",\"heap\":$L"), __DATE__, __TIME__,
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 	ESP.getFreeHeap());
 	FSInfo fs_info;
 	LittleFS.info(fs_info);
@@ -2258,7 +2262,7 @@ URLHandler urls[] = {
 };
 
 // handle Ethernet request
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 void on_firmware_update(OTF_PARAMS_DEF) {
 	if(req.isCloudRequest()) otf_send_result(OTF_PARAMS, HTML_NOT_PERMITTED, "fw update");
 	print_header_compressed_html(OTF_PARAMS, update_html_gz_len);
@@ -2498,7 +2502,7 @@ void handle_web_request(char *p) {
 #if defined(ARDUINO)
 #define NTP_NTRIES 10
 /** NTP sync request */
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
 // due to lwip not supporting UDP, we have to use configTime and time() functions
 // othewise, using UDP is much faster for NTP sync
 ulong getNtpTime() {

@@ -366,7 +366,7 @@ enum {
 
 	#define USE_DISPLAY
 	#define USE_LCD
-#elif defined(ESP8266) // for ESP8266
+#elif defined(ESP8266) || defined(ESP32) // for ESP8266 and ESP32
 
 	#define OS_HW_VERSION    (OS_HW_VERSION_BASE+30)
 	#define IOEXP_PIN        0x80 // base for pins on main IO expander
