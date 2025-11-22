@@ -575,6 +575,57 @@ unsigned char OpenSprinkler::start_network() {
 
 unsigned char OpenSprinkler::start_ether() {
 #if defined(ESP8266) || defined(ESP32)
+	#ifdef WT32_ETH01
+	// WT32-ETH01 initialization with LAN8720 PHY
+	// GPIO pins for WT32-ETH01 module
+	#define ETH_PHY_TYPE ETH_PHY_LAN8720
+	#define ETH_PHY_ADDR 1
+	#define ETH_PHY_MDC 23
+	#define ETH_PHY_MDIO 18
+	#define ETH_PHY_POWER 16
+	#define ETH_CLK_MODE ETH_CLOCK_GPIO0_IN
+	
+	// Initialize Ethernet with LAN8720 PHY
+	pinMode(ETH_PHY_POWER, OUTPUT);
+	digitalWrite(ETH_PHY_POWER, HIGH);
+	delay(100); // Give PHY time to power up
+	
+	if(!ETH.begin(ETH_PHY_ADDR, ETH_PHY_POWER, ETH_PHY_MDC, ETH_PHY_MDIO, ETH_PHY_TYPE, ETH_CLK_MODE)) {
+		DEBUG_PRINTLN(F("ETH.begin failed"));
+		return 0;
+	}
+	
+	load_hardware_mac((uint8_t*)tmp_buffer, true);
+	ETH.setHostname("OpenSprinkler");
+	
+	if (iopts[IOPT_USE_DHCP]==0) { // config static IP
+		IPAddress staticip(iopts+IOPT_STATIC_IP1);
+		IPAddress gateway(iopts+IOPT_GATEWAY_IP1);
+		IPAddress dns(iopts+IOPT_DNS_IP1);
+		IPAddress subn(iopts+IOPT_SUBNET_MASK1);
+		eth.config(staticip, gateway, subn, dns);
+	}
+	
+	lcd_print_line_clear_pgm(PSTR("Start Ethernet"), 1);
+	lcd_print_line_clear_pgm(PSTR("  [LAN8720]   "), 2);
+	
+	ulong timeout = millis()+60000; // 60 seconds time out
+	unsigned char timecount = 1;
+	while (!ETH.linkUp() && (long)(millis()-timeout)<0) {
+		DEBUG_PRINT(".");
+		lcd.setCursor(13, 2);
+		lcd.print(timecount);
+		delay(1000);
+		timecount++;
+	}
+	if(!ETH.linkUp()) {
+		DEBUG_PRINTLN(F("ETH link timeout"));
+		return 0;
+	}
+	lcd_print_line_clear_pgm(PSTR("Network is ready"), 0);
+	lcd_print_ip(ETH.localIP().v4(), 1);
+	return 1;
+	#else
 	if(hw_rev<2) return 0;  // ethernet capability is only available when hw_rev>=2
 	eth.isW5500 = (hw_rev==2)?false:true; // os 3.2 uses enc28j60 and 3.3 uses w5500
 
@@ -679,6 +730,7 @@ unsigned char OpenSprinkler::start_ether() {
 		// if wired connection has failed at this point, return depending on whether the user wants to force wired
 		return (iopts[IOPT_FORCE_WIRED] ? 1 : 0);
 	}
+	#endif // WT32_ETH01
 
 #else
 	Ethernet.init(PIN_ETHER_CS);  // make sure to call this before any Ethernet calls

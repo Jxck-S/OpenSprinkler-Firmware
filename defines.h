@@ -367,6 +367,10 @@ enum {
 	#define USE_DISPLAY
 	#define USE_LCD
 #elif defined(ESP8266) || defined(ESP32) // for ESP8266 and ESP32
+	/* Note: For WT32-ETH01 module with built-in Ethernet (LAN8720), 
+	 * use the os3x_esp32_eth build environment which defines WT32_ETH01
+	 * This module uses native ESP32 Ethernet via RMII interface instead of SPI-based controllers
+	 */
 
 	#define OS_HW_VERSION    (OS_HW_VERSION_BASE+30)
 	#define IOEXP_PIN        0x80 // base for pins on main IO expander

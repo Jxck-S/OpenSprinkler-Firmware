@@ -44,9 +44,13 @@
 	#endif
 	#if defined(ESP8266) || defined(ESP32)
 		DNSServer *dns = NULL;
+		#ifndef WT32_ETH01
 		ENC28J60lwIP enc28j60(PIN_ETHER_CS); // ENC28J60 lwip for wired Ether
 		Wiznet5500lwIP w5500(PIN_ETHER_CS); // W5500 lwip for wired Ether
 		lwipEth eth;
+		#else
+		esp32Eth eth; // WT32-ETH01 native Ethernet
+		#endif
 		bool useEth = false; // tracks whether we are using WiFi or wired Ether connection
 	#else
 		EthernetServer *m_server = NULL;

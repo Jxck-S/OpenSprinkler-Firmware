@@ -54,8 +54,12 @@
 	#elif defined(ESP32) // for ESP32
 		#include <FS.h>
 		#include <LittleFS.h>
-		#include <ENC28J60lwIP.h>
-		#include <W5500lwIP.h>
+		#ifdef WT32_ETH01
+			#include <ETH.h>
+		#else
+			#include <ENC28J60lwIP.h>
+			#include <W5500lwIP.h>
+		#endif
 		#include <OpenThingsFramework.h>
 		#include <DNSServer.h>
 		#include <Ticker.h>
@@ -95,6 +99,7 @@
 	extern WebServer *update_server;
 	#endif
 	#if defined(ESP8266) || defined(ESP32)
+	#ifndef WT32_ETH01
 	extern ENC28J60lwIP enc28j60;
 	extern Wiznet5500lwIP w5500;
 	struct lwipEth {
@@ -125,6 +130,36 @@
 		}
 	};
 	extern lwipEth eth;
+	#else
+	// ESP32 native Ethernet wrapper for WT32-ETH01
+	struct esp32Eth {
+		inline boolean config(const IPAddress& local_ip, const IPAddress& gateway, const IPAddress& subnet, const IPAddress& dns1 = IPADDR_NONE, const IPAddress& dns2 = IPADDR_NONE) {
+			return ETH.config(local_ip, gateway, subnet, dns1, dns2);
+		}
+		inline boolean begin() {
+			return true; // ETH.begin() is called earlier in setup
+		}
+		inline IPAddress localIP() {
+			return ETH.localIP();
+		}
+		inline IPAddress subnetMask() {
+			return ETH.subnetMask();
+		}
+		inline IPAddress gatewayIP() {
+			return ETH.gatewayIP();
+		}
+		inline void setDefault() {
+			// Not needed for ESP32 native Ethernet
+		}
+		inline bool connected() {
+			return ETH.linkUp();
+		}
+		inline wl_status_t status() {
+			return ETH.linkUp() ? WL_CONNECTED : WL_DISCONNECTED;
+		}
+	};
+	extern esp32Eth eth;
+	#endif
 	#else
 		// AVR specific
 	#endif
