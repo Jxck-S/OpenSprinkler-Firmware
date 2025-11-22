@@ -576,16 +576,7 @@ unsigned char OpenSprinkler::start_network() {
 unsigned char OpenSprinkler::start_ether() {
 #if defined(ESP8266) || defined(ESP32)
 	#ifdef WT32_ETH01
-	// WT32-ETH01 initialization with LAN8720 PHY
-	// GPIO pins for WT32-ETH01 module
-	#define ETH_PHY_TYPE ETH_PHY_LAN8720
-	#define ETH_PHY_ADDR 1
-	#define ETH_PHY_MDC 23
-	#define ETH_PHY_MDIO 18
-	#define ETH_PHY_POWER 16
-	#define ETH_CLK_MODE ETH_CLOCK_GPIO0_IN
-	
-	// Initialize Ethernet with LAN8720 PHY
+	// WT32-ETH01 initialization with LAN8720 PHY (pin configuration in defines.h)
 	pinMode(ETH_PHY_POWER, OUTPUT);
 	digitalWrite(ETH_PHY_POWER, HIGH);
 	delay(100); // Give PHY time to power up
@@ -595,7 +586,9 @@ unsigned char OpenSprinkler::start_ether() {
 		return 0;
 	}
 	
+	// Load and set MAC address for consistent addressing
 	load_hardware_mac((uint8_t*)tmp_buffer, true);
+	ETH.setMacAddress(tmp_buffer);
 	ETH.setHostname("OpenSprinkler");
 	
 	if (iopts[IOPT_USE_DHCP]==0) { // config static IP
@@ -610,13 +603,13 @@ unsigned char OpenSprinkler::start_ether() {
 	lcd_print_line_clear_pgm(PSTR("  [LAN8720]   "), 2);
 	
 	ulong timeout = millis()+60000; // 60 seconds time out
-	unsigned char timecount = 1;
+	unsigned char secondsElapsed = 1;
 	while (!ETH.linkUp() && (long)(millis()-timeout)<0) {
 		DEBUG_PRINT(".");
 		lcd.setCursor(13, 2);
-		lcd.print(timecount);
+		lcd.print(secondsElapsed);
 		delay(1000);
-		timecount++;
+		secondsElapsed++;
 	}
 	if(!ETH.linkUp()) {
 		DEBUG_PRINTLN(F("ETH link timeout"));
