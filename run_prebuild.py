@@ -54,7 +54,16 @@ def create_esp32_n8_release_artifact(source, target, env):
     print(f"Created ESP32-C6-N8 release artifact: {release_path}")
 
 
+def create_esp32_rmii_release_artifact(source, target, env):
+    source_path = env.subst("$BUILD_DIR/${PROGNAME}.bin")
+    release_path = env.subst("$BUILD_DIR/${PROGNAME}.bin32eth")
+    shutil.copy2(source_path, release_path)
+    print(f"Created ESP32 RMII release artifact: {release_path}")
+
+
 # PlatformIO expects firmware.bin for its upload pipeline. Keep that internal
 # artifact and also emit the architecture-specific file used for releases.
 if env.get("PIOENV") == "os4_esp32c6_n8":
     env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", create_esp32_n8_release_artifact)
+elif env.get("PIOENV", "").startswith("esp32_lan8720_"):
+    env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", create_esp32_rmii_release_artifact)
