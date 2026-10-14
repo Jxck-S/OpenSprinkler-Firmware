@@ -457,7 +457,22 @@ unsigned char OpenSprinkler::start_network() {
 unsigned char OpenSprinkler::start_ether() {
 	if(!osboard::has(osboard::CAP_ETHERNET)) return 0;
 	#if defined(ESP32)
+	#if !defined(OS_ETH_RMII)
 	SPI.begin(PIN_SPI_SCK, PIN_SPI_MISO, PIN_SPI_MOSI, PIN_ETHER_CS);
+	#endif
+	#if defined(OS_ETH_RMII)
+	if (!ETH.begin(OS_ETH_PHY_TYPE, OS_ETH_PHY_ADDR, OS_ETH_PHY_MDC, OS_ETH_PHY_MDIO,
+		OS_ETH_PHY_POWER, OS_ETH_CLK_MODE)) return 0;
+	lcd_print_line_clear_pgm(PSTR("Start wired link"), 1);
+	lcd_print_line_clear_pgm(PSTR("  [rmii]     "), 2);
+	#else
+	if (!ETH.begin(ETH_PHY_W5500, 1, PIN_ETHER_CS, PIN_ETHER_IRQ,
+		PIN_ETHER_RESET, SPI, ETHER_SPI_CLOCK / 1000000UL)) return 0;
+	lcd_print_line_clear_pgm(PSTR("Start wired link"), 1);
+	lcd_print_line_clear_pgm(PSTR("  [w5500]    "), 2);
+	#endif
+	// ETH.config() needs the interface that ETH.begin() creates; before that it
+	// returns false and the static address is silently replaced by DHCP.
 	if (iopts[IOPT_USE_DHCP] == 0) {
 		IPAddress staticip(iopts + IOPT_STATIC_IP1);
 		IPAddress gateway(iopts + IOPT_GATEWAY_IP1);
@@ -465,10 +480,6 @@ unsigned char OpenSprinkler::start_ether() {
 		IPAddress subnet(iopts + IOPT_SUBNET_MASK1);
 		ETH.config(staticip, gateway, subnet, dns);
 	}
-	if (!ETH.begin(ETH_PHY_W5500, 1, PIN_ETHER_CS, PIN_ETHER_IRQ,
-		PIN_ETHER_RESET, SPI, ETHER_SPI_CLOCK / 1000000UL)) return 0;
-	lcd_print_line_clear_pgm(PSTR("Start wired link"), 1);
-	lcd_print_line_clear_pgm(PSTR("  [w5500]    "), 2);
 	uint32_t timeout = millis() + 10000UL;
 	uint32_t next_count = millis();
 	uint8_t timecount = 1;
@@ -789,6 +800,14 @@ void OpenSprinkler::begin() {
 	detect_expanders();
 
 #elif defined(ESP32)
+	#if defined(OS_ETH_RMII)
+	// No external flash or current sensing: GPIO8 is internal flash and GPIO0
+	// carries the RMII clock on classic ESP32.
+	osboard::select(osboard::PROFILE_ESP32_RMII);
+	Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
+	const osboard::HardwareDetection hardware =
+		osboard::detect_esp32_rmii_hardware(probe_i2c_address);
+	#else
 	osboard::select(osboard::PROFILE_OS_40);
 	// Keep the shared SPI bus idle until external flash support is initialized.
 	pinMode(PIN_FLASH_CS, OUTPUT);
@@ -796,23 +815,36 @@ void OpenSprinkler::begin() {
 	Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
 	const osboard::HardwareDetection hardware =
 		osboard::detect_os4_hardware(probe_i2c_address);
+	#endif
 	hw_type = hardware.power_type;
 	osboard::select(hardware.profile);
 
-	analogReadResolution(12);
-	(void)analogRead(PIN_CURR_SENSE);
-	analogSetPinAttenuation(PIN_CURR_SENSE, ADC_0db);
+	if(PIN_CURR_SENSE != osboard::UNUSED_PIN) {
+		analogReadResolution(12);
+		(void)analogRead(PIN_CURR_SENSE);
+		analogSetPinAttenuation(PIN_CURR_SENSE, ADC_0db);
+	}
 
-	if(detect_i2c(hardware.driver_address)) {
+	switch(IOEXP::detectType(hardware.driver_address)) {
+	case IOEXP_TYPE_9555:
+	case IOEXP_TYPE_UNKNOWN: // present but unreadable: keep the v4 PCA9555 default
 		drio = new PCA9555(hardware.driver_address);
-	} else {
+		break;
+	case IOEXP_TYPE_NONEXIST:
 		// Keep GPIO wrappers safe on incomplete prototype hardware.
 		drio = new IOEXP(hardware.driver_address);
+		break;
+	default:
+		// PCF857x: quasi-bidirectional, active-low outputs like OS 3.0.
+		drio = new PCF8574(hardware.driver_address);
+		break;
 	}
 	gpio_set_main_expander(drio);
 	if(drio->type == IOEXP_TYPE_9555) {
 		drio->i2c_write(NXP_CONFIG_REG, osboard::OS40_IO_CONFIG);
 		drio->i2c_write(NXP_OUTPUT_REG, osboard::OS40_IO_OUTPUT);
+	} else if(drio->type == IOEXP_TYPE_8574) {
+		drio->i2c_write(NXP_OUTPUT_REG, osboard::PCF8574_ALL_OFF);
 	}
 	if (hardware.initialize_usb_pd) usbpd.begin();
 	if (hw_type == HW_TYPE_DC) {
@@ -1242,10 +1274,13 @@ void OpenSprinkler::apply_all_station_bits(void (*post_activation_callback)()) {
 		digitalWriteExt(PIN_BOOST_EN, HIGH);
 		engage_booster = 0;
 	}
-	if(drio) {
+	if(drio && drio->type == IOEXP_TYPE_9555) {
 		uint16_t reg = drio->i2c_read(NXP_OUTPUT_REG);
 		reg = (reg & 0xFF00) | applied_station_bits[0];
 		drio->i2c_write(NXP_OUTPUT_REG, reg);
+	} else if(drio && drio->type == IOEXP_TYPE_8574) {
+		/* PCF8574 drives active-low relay boards, so all bits must be flipped */
+		drio->i2c_write(NXP_OUTPUT_REG, ~applied_station_bits[0]);
 	}
 	for(int i=0;i<MAX_EXT_BOARDS/2;i++) {
 		uint16_t data = ((uint16_t)applied_station_bits[i*2+2] << 8) | applied_station_bits[i*2+1];
@@ -1411,6 +1446,7 @@ uint16_t OpenSprinkler::read_current(bool use_ema) {
 	}
 	curr = analogRead(PIN_CURR_SENSE)*scale;
 #else
+	if(PIN_CURR_SENSE == osboard::UNUSED_PIN) return 0;
 	const uint8_t sample_count = 32;
 	uint32_t raw_sum = 0;
 	for(uint8_t i = 0; i < sample_count; i++) {
@@ -1817,6 +1853,29 @@ void OpenSprinkler::switch_rfstation(RFStationData *data, bool turnon) {
 	rfswitch.send(turnon ? code.on : code.off, code.bitlength);
 }
 
+/** Whether a GPIO station may drive this pin on the current board */
+bool OpenSprinkler::gpio_station_pin_allowed(unsigned char gpio) {
+	unsigned char gpio_list[] = PIN_FREE_LIST;
+	for (unsigned char i = 0; i < sizeof(gpio_list); i++) {
+		if (gpio_list[i] == gpio) return true;
+	}
+	return false;
+}
+
+/** Drive every GPIO station to its inactive level at boot
+ * Otherwise the pins float until each station first switches, which can
+ * energize active-low relay boards.
+ */
+void OpenSprinkler::init_gpio_stations() {
+	StationData *pdata = (StationData*) tmp_buffer;
+	for (unsigned char sid = 0; sid < nstations; sid++) {
+		if (!(attrib_spe[sid>>3] & (1<<(sid&0x07)))) continue;
+		if (get_station_type(sid) != STN_TYPE_GPIO) continue;
+		get_station_data(sid, pdata);
+		switch_gpiostation((GPIOStationData *)pdata->sped, false);
+	}
+}
+
 /** Switch GPIO station
  * Special data for GPIO Station is three bytes of ascii decimal (not hex)
  * First two bytes are zero padded GPIO pin number.
@@ -1826,6 +1885,8 @@ void OpenSprinkler::switch_gpiostation(GPIOStationData *data, bool turnon) {
 	unsigned char gpio = (data->pin[0] - '0') * 10 + (data->pin[1] - '0');
 	unsigned char activeState = data->active - '0';
 
+	// Imported configs may name pins reserved on this board (e.g. Ethernet or flash).
+	if (!gpio_station_pin_allowed(gpio)) return;
 	pinMode(gpio, OUTPUT);
 	if (turnon)
 		digitalWrite(gpio, activeState);
@@ -2273,6 +2334,7 @@ void OpenSprinkler::options_setup() {
 		parse_otc_config();
 
 		attribs_load();
+		init_gpio_stations();
 	}
 
 #if defined(ARDUINO)	// handle buttons

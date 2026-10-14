@@ -15,6 +15,7 @@ enum ProfileId : uint8_t {
 	PROFILE_OS_40,
 	PROFILE_OSPI_BOARD,
 	PROFILE_DEMO_BOARD,
+	PROFILE_ESP32_RMII,
 };
 
 enum Capability : uint8_t {
@@ -92,6 +93,13 @@ constexpr uint8_t OS40_SPI_MISO_PIN = 20;
 constexpr uint8_t OS40_SPI_CLOCK_PIN = 21;
 constexpr uint8_t OS40_I2C_CLOCK_PIN = 22;
 constexpr uint8_t OS40_I2C_DATA_PIN = 23;
+
+// Classic ESP32 with an RMII Ethernet PHY (e.g. LAN8720 on WT32-ETH01).
+// Board-specific pins come from build flags; see boards/rmii_config.h.
+// Reports the v4 hardware version because it runs the same ESP32 feature set.
+constexpr uint16_t ESP32_RMII_IO_CONFIG = 0xFF00;
+constexpr uint16_t ESP32_RMII_IO_OUTPUT = 0x0000;
+constexpr uint8_t PCF8574_ALL_OFF = 0xFF;
 
 constexpr uint8_t OSPI_SHIFT_LATCH_PIN = 22;
 constexpr uint8_t OSPI_SHIFT_DATA_PIN = 27;

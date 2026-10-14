@@ -70,6 +70,17 @@ const BoardProfile OS40_PROFILE OSBOARD_PROGMEM = {
 	CAP_ETHERNET,
 };
 
+// All I/O is on the I2C bus: buttons on main expander P1.0-P1.2, no direct GPIO.
+const BoardProfile ESP32_RMII_PROFILE OSBOARD_PROGMEM = {
+	{{IO_EXPANDER_PIN_BASE + 8, IO_EXPANDER_PIN_BASE + 9, IO_EXPANDER_PIN_BASE + 10},
+	 {UNUSED_PIN, UNUSED_PIN, UNUSED_PIN, UNUSED_PIN},
+	 {UNUSED_PIN, UNUSED_PIN, UNUSED_PIN, UNUSED_PIN},
+	 UNUSED_PIN, UNUSED_PIN, UNUSED_PIN, UNUSED_PIN,
+	 UNUSED_PIN, UNUSED_PIN, UNUSED_PIN, UNUSED_PIN},
+	0,
+	CAP_ETHERNET,
+};
+
 const BoardProfile OSPI_PROFILE OSBOARD_PROGMEM = {
 	{{24, 18, 10},
 	 {14, 23, UNUSED_PIN, UNUSED_PIN},
@@ -124,6 +135,9 @@ void select(ProfileId id) {
 		break;
 	case PROFILE_OS_40:
 		profile = &OS40_PROFILE;
+		break;
+	case PROFILE_ESP32_RMII:
+		profile = &ESP32_RMII_PROFILE;
 		break;
 	case PROFILE_OSPI_BOARD:
 		profile = &OSPI_PROFILE;

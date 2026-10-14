@@ -425,6 +425,29 @@ enum {
 
 	#define USE_DISPLAY
 
+#elif defined(ESP32) && defined(OS_ETH_RMII) // classic ESP32 + RMII Ethernet PHY
+
+	#include "boards/rmii_config.h"
+
+	#define OS_HW_VERSION    (OS_HW_VERSION_BASE + osboard::OS40_HARDWARE_VERSION)
+	#define IOEXP_PIN        osboard::IO_EXPANDER_PIN_BASE
+	#define MAIN_I2CADDR     osboard::MAIN_IO_EXPANDER_ADDRESS
+	#define EXP_I2CADDR_BASE osboard::EXPANDER_ADDRESS_BASE
+	#define LCD_I2CADDR      osboard::LCD_ADDRESS
+	#define RTC_I2CADDR      osboard::RTC_ADDRESS
+	#define CH224_I2CADDR    osboard::CH224_ADDRESS
+
+	// GPIO0 carries the RMII clock and GPIO6-11 are internal flash on classic
+	// ESP32, so the v4 current-sense and external-flash pins must stay unused.
+	#define PIN_CURR_SENSE   osboard::UNUSED_PIN
+	#define PIN_I2C_SCL      OS_I2C_SCL
+	#define PIN_I2C_SDA      OS_I2C_SDA
+	#define ETHER_BUFFER_SIZE 4096
+	#define ETHER_BUFFER_ALLOC_SIZE ETHER_BUFFER_SIZE
+	#define PIN_FREE_LIST    OS_GPIO_FREE_LIST
+
+	#define USE_DISPLAY
+
 #elif defined(ESP32) // OpenSprinkler v4.0 ESP32-C6
 
 	#define OS_HW_VERSION    (OS_HW_VERSION_BASE + osboard::OS40_HARDWARE_VERSION)

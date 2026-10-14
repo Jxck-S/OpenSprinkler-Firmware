@@ -419,6 +419,8 @@ public:
 	static void switch_remotestation(RemoteIPStationData *data, bool turnon, uint32_t dur=0); // switch remote IP station
 	static void switch_remotestation(RemoteOTCStationData *data, bool turnon, uint32_t dur=0); // switch remote OTC station
 	static void switch_gpiostation(GPIOStationData *data, bool turnon); // switch gpio station
+	static bool gpio_station_pin_allowed(unsigned char gpio); // whether a gpio station may use this pin
+	static void init_gpio_stations(); // drive all gpio stations to their inactive level
 	static void switch_httpstation(HTTPStationData *data, bool turnon, bool usessl=false); // switch http station
 
 	// -- options and data storeage

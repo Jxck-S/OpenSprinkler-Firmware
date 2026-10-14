@@ -2687,7 +2687,11 @@ void server_json_debug(OTF_PARAMS_DEF) {
 	bfill.emit_p(PSTR("\"sprlog_fail\":$L,\"sprlog_mismatch\":$L,"),
 		sprinkler_log_failures, sprinkler_log_mismatches);
 	if (useEth) {
+		#if defined(OS_ETH_RMII)
+		bfill.emit_p(PSTR("\"isW5500\":0,\"link_mbps\":$D}"), (int)ETH.linkSpeed());
+		#else
 		bfill.emit_p(PSTR("\"isW5500\":1,\"spi_clock\":$L}"), (uint32_t)ETHER_SPI_CLOCK);
+		#endif
 	} else {
 		bfill.emit_p(PSTR("\"rssi\":$D,\"bssid\":\"$S\",\"bssidchl\":\"$O\"}"),
 			WiFi.RSSI(), WiFi.BSSIDstr().c_str(), SOPT_STA_BSSID_CHL);
