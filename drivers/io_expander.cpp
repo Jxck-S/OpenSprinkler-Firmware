@@ -100,7 +100,7 @@ uint16_t PCF8574::i2c_read(uint8_t reg) {
 	if(Wire.requestFrom(address, (uint8_t)1) != 1) return 0xFFFF;
 	uint16_t data = Wire.read();
 	Wire.endTransmission();
-	return data;
+	return data | 0xFF00; // pins 8-15 do not exist; read them as released (high)
 }
 
 void PCF8574::i2c_write(uint8_t reg, uint16_t v) {
