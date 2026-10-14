@@ -28,6 +28,8 @@ nav:
       - 'Setting Up Email Notifications': 'guides/email-notifications.md'
       - 'Using MQTT': 'guides/mqtt.md'
       - 'Setting Up IFTTT Notifications': 'guides/ifttt-notifications.md'
+    - 'DIY Hardware':
+      - 'ESP32 + LAN8720 Wired Ethernet': 'guides/esp32-lan8720.md'
   - 'OpenSprinkler Pi':
     - 'Installing and Updating Firmware': 'ospi/firmware-installation.md'
   - 'Archived':
