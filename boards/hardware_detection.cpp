@@ -76,4 +76,22 @@ HardwareDetection detect_os4_hardware(I2cProbe probe_i2c) {
 	};
 }
 
+// Classic ESP32 + RMII PHY: no CH224, USB-PD or current sensing, relays on the
+// main expander at 0x20. POWER_UNKNOWN keeps current alerts and boost/current
+// options off. The expander chip type (PCA9555 or PCF8574) is detected at
+// runtime by the caller; a missing expander still selects the profile so GPIO
+// stations work.
+HardwareDetection detect_esp32_rmii_hardware(I2cProbe probe_i2c) {
+	(void)probe_i2c;
+	return {
+		0,
+		POWER_UNKNOWN,
+		PROFILE_ESP32_RMII,
+		DRIVER_PCA9555,
+		MAIN_IO_EXPANDER_ADDRESS,
+		false,
+		false,
+	};
+}
+
 } // namespace osboard

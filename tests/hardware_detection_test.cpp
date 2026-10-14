@@ -124,5 +124,22 @@ int main() {
 	assert(result.initialize_usb_pd);
 	assert(probe_count == 2);
 
+	// ESP32 RMII boards have no current sensing or USB-PD, with or without an expander.
+	reset_probes();
+	result = detect_esp32_rmii_hardware(probe_i2c);
+	check_driver(result, 0, POWER_UNKNOWN, PROFILE_ESP32_RMII, DRIVER_PCA9555,
+		MAIN_IO_EXPANDER_ADDRESS);
+	assert(!result.separate_main_io);
+	assert(!result.initialize_usb_pd);
+
+	reset_probes();
+	present[MAIN_IO_EXPANDER_ADDRESS] = true;
+	present[CH224_ADDRESS] = true;
+	present[CH224_ADDRESS + 1] = true;
+	result = detect_esp32_rmii_hardware(probe_i2c);
+	check_driver(result, 0, POWER_UNKNOWN, PROFILE_ESP32_RMII, DRIVER_PCA9555,
+		MAIN_IO_EXPANDER_ADDRESS);
+	assert(!result.initialize_usb_pd);
+
 	return 0;
 }

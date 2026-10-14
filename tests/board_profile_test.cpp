@@ -64,6 +64,25 @@ int main() {
 	assert(OS40_I2C_CLOCK_PIN == 22);
 	assert(OS40_I2C_DATA_PIN == 23);
 
+	check_sensor_pins(PROFILE_ESP32_RMII, 0, UNUSED_PIN, UNUSED_PIN,
+		UNUSED_PIN, UNUSED_PIN);
+	assert(active().pins.buttons[0] == IO_EXPANDER_PIN_BASE + 8);
+	assert(active().pins.buttons[1] == IO_EXPANDER_PIN_BASE + 9);
+	assert(active().pins.buttons[2] == IO_EXPANDER_PIN_BASE + 10);
+	for (uint8_t i = 0; i < 4; i++) {
+		assert(active().pins.sensor_pullups[i] == UNUSED_PIN);
+	}
+	// No direct GPIO: RMII owns most classic-ESP32 pins.
+	assert(active().pins.rf_rx == UNUSED_PIN);
+	assert(active().pins.rf_tx == UNUSED_PIN);
+	assert(active().pins.boost == UNUSED_PIN);
+	assert(active().pins.boost_enable == UNUSED_PIN);
+	assert(active().pins.latch_common == UNUSED_PIN);
+	assert(active().pins.io_expander_interrupt == UNUSED_PIN);
+	assert(has(CAP_ETHERNET));
+	assert(ESP32_RMII_IO_CONFIG == OS40_IO_CONFIG);
+	assert(PCF8574_ALL_OFF == 0xFF);
+
 	check_sensor_pins(PROFILE_OSPI_BOARD, 2, 14, 23, UNUSED_PIN, UNUSED_PIN);
 	assert(active().pins.sensor_pullups[0] == UNUSED_PIN);
 	assert(active().pins.buttons[0] == 24);
