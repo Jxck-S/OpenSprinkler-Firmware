@@ -460,13 +460,6 @@ unsigned char OpenSprinkler::start_ether() {
 	#if !defined(OS_ETH_RMII)
 	SPI.begin(PIN_SPI_SCK, PIN_SPI_MISO, PIN_SPI_MOSI, PIN_ETHER_CS);
 	#endif
-	if (iopts[IOPT_USE_DHCP] == 0) {
-		IPAddress staticip(iopts + IOPT_STATIC_IP1);
-		IPAddress gateway(iopts + IOPT_GATEWAY_IP1);
-		IPAddress dns(iopts + IOPT_DNS_IP1);
-		IPAddress subnet(iopts + IOPT_SUBNET_MASK1);
-		ETH.config(staticip, gateway, subnet, dns);
-	}
 	#if defined(OS_ETH_RMII)
 	if (!ETH.begin(OS_ETH_PHY_TYPE, OS_ETH_PHY_ADDR, OS_ETH_PHY_MDC, OS_ETH_PHY_MDIO,
 		OS_ETH_PHY_POWER, OS_ETH_CLK_MODE)) return 0;
@@ -478,6 +471,15 @@ unsigned char OpenSprinkler::start_ether() {
 	lcd_print_line_clear_pgm(PSTR("Start wired link"), 1);
 	lcd_print_line_clear_pgm(PSTR("  [w5500]    "), 2);
 	#endif
+	// ETH.config() needs the interface that ETH.begin() creates; before that it
+	// returns false and the static address is silently replaced by DHCP.
+	if (iopts[IOPT_USE_DHCP] == 0) {
+		IPAddress staticip(iopts + IOPT_STATIC_IP1);
+		IPAddress gateway(iopts + IOPT_GATEWAY_IP1);
+		IPAddress dns(iopts + IOPT_DNS_IP1);
+		IPAddress subnet(iopts + IOPT_SUBNET_MASK1);
+		ETH.config(staticip, gateway, subnet, dns);
+	}
 	uint32_t timeout = millis() + 10000UL;
 	uint32_t next_count = millis();
 	uint8_t timecount = 1;
