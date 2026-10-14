@@ -1851,6 +1851,29 @@ void OpenSprinkler::switch_rfstation(RFStationData *data, bool turnon) {
 	rfswitch.send(turnon ? code.on : code.off, code.bitlength);
 }
 
+/** Whether a GPIO station may drive this pin on the current board */
+bool OpenSprinkler::gpio_station_pin_allowed(unsigned char gpio) {
+	unsigned char gpio_list[] = PIN_FREE_LIST;
+	for (unsigned char i = 0; i < sizeof(gpio_list); i++) {
+		if (gpio_list[i] == gpio) return true;
+	}
+	return false;
+}
+
+/** Drive every GPIO station to its inactive level at boot
+ * Otherwise the pins float until each station first switches, which can
+ * energize active-low relay boards.
+ */
+void OpenSprinkler::init_gpio_stations() {
+	StationData *pdata = (StationData*) tmp_buffer;
+	for (unsigned char sid = 0; sid < nstations; sid++) {
+		if (!(attrib_spe[sid>>3] & (1<<(sid&0x07)))) continue;
+		if (get_station_type(sid) != STN_TYPE_GPIO) continue;
+		get_station_data(sid, pdata);
+		switch_gpiostation((GPIOStationData *)pdata->sped, false);
+	}
+}
+
 /** Switch GPIO station
  * Special data for GPIO Station is three bytes of ascii decimal (not hex)
  * First two bytes are zero padded GPIO pin number.
@@ -1860,6 +1883,8 @@ void OpenSprinkler::switch_gpiostation(GPIOStationData *data, bool turnon) {
 	unsigned char gpio = (data->pin[0] - '0') * 10 + (data->pin[1] - '0');
 	unsigned char activeState = data->active - '0';
 
+	// Imported configs may name pins reserved on this board (e.g. Ethernet or flash).
+	if (!gpio_station_pin_allowed(gpio)) return;
 	pinMode(gpio, OUTPUT);
 	if (turnon)
 		digitalWrite(gpio, activeState);
@@ -2307,6 +2332,7 @@ void OpenSprinkler::options_setup() {
 		parse_otc_config();
 
 		attribs_load();
+		init_gpio_stations();
 	}
 
 #if defined(ARDUINO)	// handle buttons
